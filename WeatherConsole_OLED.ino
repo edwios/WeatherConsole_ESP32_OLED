@@ -320,6 +320,10 @@ void setup() {
     WiFi.disconnect(true);
     saqi = "No WiFi";
     delay(1000);
+    WiFi.enableSTA(true);
+    WiFi.enableAP(false);
+    delay(2000);
+    
     WiFi.onEvent(WiFiEvent);
     WiFi.begin(ssid, password);
     if (debug) {
