@@ -49,6 +49,8 @@
 #define TP_LIVTEMP  "/living/temperature"
 #define TP_LIVHUMI  "/living/humidity"
 #define TP_LIVAQI  "/living/aqi"
+#define TP_LIVCO2  "/living/co2"
+#define TP_LIVVOC  "/living/voc"
 #define TP_LIVMOTION  "/living/motion"
 #define TP_BALTEMP  "/balcony/temperature"
 #define TP_BALHUMI  "/balcony/humidity"
@@ -61,8 +63,8 @@
 #define CMD_DISP_OFF "display/off"
 #define CMD_DISP_ON "display/on"
 
-const char* ssid     = "You are being watched";
-const char* password = "Akihabara";
+const char* ssid     = "<SSID_NAME>";
+const char* password = "<SSID_PASS>";
 const char* mqtt_server = "10.0.1.250";
 
 bool debug = false;
@@ -86,7 +88,7 @@ String tp_baltemp = TP_BALTEMP;
 String tp_balhumi = TP_BALHUMI;
 String tp_balaqi = TP_BALAQI;
 String tp_status = TP_STATUS;
-String livtemp="-",livhumi="-",livaqi="-",baltemp="-",balhumi="-",balaqi="-",sstatus="-",timeStr="Mon 00 00:00", saqi;
+String livtemp="-",livhumi="-",livaqi="-",livco2="-",livvoc="-",baltemp="-",balhumi="-",balaqi="-",sstatus="-",timeStr="Mon 00 00:00", saqi;
 
 int timeOffset = 8*3600;  // TZ, in seconds
 int screenW = 128;
@@ -96,8 +98,8 @@ int clockCenterX = clockRadius;
 int clockCenterY = ((screenH-16)/2)+16;   // top yellow part is 16 px height
 int digitalClockCenterY = clockCenterY - 12;
 int digitalClockCenterX = screenW/2;
-float liv_temp, liv_rh;
-int bal_aqi;
+//float liv_temp, liv_rh;
+//int bal_aqi;
 
 // utility function for digital clock display: prints leading 0
 String twoDigits(int digits){
@@ -173,12 +175,20 @@ void digitalClockFrame(OLEDDisplay *display, OLEDDisplayUiState* state, int16_t 
   display->drawString(digitalClockCenterX + x , 40 + y, saqi );
 }
 
+void co2VoCFrame(OLEDDisplay *display, OLEDDisplayUiState* state, int16_t x, int16_t y) {
+  display->setTextAlignment(TEXT_ALIGN_LEFT);
+  display->setFont(ArialMT_Plain_24);
+  display->drawString(10 , 16 + y, livco2 );
+  display->setFont(ArialMT_Plain_24);
+  display->drawString(10 , 40 + y, livvoc );
+}
+
 // This array keeps function pointers to all frames
 // frames are the single views that slide in
-FrameCallback frames[] = { analogClockFrame, digitalClockFrame };
+FrameCallback frames[] = { analogClockFrame, digitalClockFrame, co2VoCFrame };
 
 // how many frames are there?
-int frameCount = 2;
+int frameCount = 3;
 
 // Overlays are statically drawn on top of a frame eg. a clock
 OverlayCallback overlays[] = { clockOverlay };
@@ -191,7 +201,7 @@ void reconnect() {
   while (!mqttClient.connected()) {
       if (debug) Serial.print("Attempting MQTT connection...");
       // Attempt to connect
-      if (mqttClient.connect("ESP8266Client")) {
+      if (mqttClient.connect("WC2Client")) {
           if (debug) Serial.println("connected");
           // Once connected, publish an announcement...
           mqttClient.publish(TP_STATUS, "ready");
@@ -241,6 +251,10 @@ void mqtt_callback(char* topic, byte* payload, unsigned int length) {
         livhumi = m;
     } else if (tp.endsWith(TP_LIVAQI)) {
         livaqi = m;
+    } else if (tp.endsWith(TP_LIVCO2)) {
+        livco2 = "CO2: "+m;
+    } else if (tp.endsWith(TP_LIVVOC)) {
+        livvoc = "VoC: "+m;
     } else if (tp.endsWith(TP_BALHUMI)) {
         // Balcony temperature
         m = String(round(m.toFloat()+0.5));
